@@ -1,0 +1,10 @@
+﻿{
+  "profiles": {
+    "zoneswitch.metricsgenerator": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
