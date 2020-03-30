@@ -18,7 +18,8 @@ namespace zoneswitch.metricsgenerator
     public class Worker : BackgroundService
     {
         private readonly ILogger<Worker> _logger;
-        private string GroupName = "ZoneSwitch";
+        private string FTGroupName = "ZoneSwitchFT";
+        private string NIGroupName = "ZoneSwitchNI";
         public Worker(ILogger<Worker> logger)
         {
             _logger = logger;
@@ -52,8 +53,10 @@ namespace zoneswitch.metricsgenerator
                 var user = appsettings.EventStoreUser;
                 var password = appsettings.EventStorePassword;
                 var connection = EventStoreHost.ConnectToEventStore();
-                connection.CreatePersistentSubscriptionAsync(FundsTransferEvents.STREAM_NAME, GroupName, settings, new UserCredentials(user, password));
-                connection.ConnectToPersistentSubscription(FundsTransferEvents.STREAM_NAME, GroupName, EventSubscriber.Process, null, new UserCredentials(user, password));
+                connection.CreatePersistentSubscriptionAsync(FundsTransferEvents.STREAM_NAME, FTGroupName, settings, new UserCredentials(user, password));
+                connection.ConnectToPersistentSubscription(FundsTransferEvents.STREAM_NAME, FTGroupName, EventSubscriber.Process, null, new UserCredentials(user, password));
+                connection.CreatePersistentSubscriptionAsync(NameInquiryEvents.STREAM_NAME, NIGroupName, settings, new UserCredentials(user, password));
+                connection.ConnectToPersistentSubscription(NameInquiryEvents.STREAM_NAME, NIGroupName, EventSubscriber.Process, null, new UserCredentials(user, password));
             }
             catch (Exception) 
             {

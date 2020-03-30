@@ -16,6 +16,7 @@ namespace zoneswitch.metricsgenerator.Repository
         public static AppSettings appsettings { get; set; }
         public static Dictionary<string, FTTransactionDetail> FTTransactionDetails = new Dictionary<string, FTTransactionDetail>();
         public static Dictionary<string, DateTime> NITransactionDetails = new Dictionary<string, DateTime>();
+        public static Dictionary<string, DateTime> IsoFTTransactionDetails = new Dictionary<string, DateTime>();
         public static async Task<bool> ProcessFundsTransferInitiatedEvent(string eventData)
         {
             var transactionInitiatedEvent = JsonConvert.DeserializeObject<TransactionInitiatedEvent>(eventData);
@@ -26,7 +27,9 @@ namespace zoneswitch.metricsgenerator.Repository
                 StartTime = Convert.ToDateTime(transactionInitiatedEvent.dateCreated)
             };
 
-            FTTransactionDetails.Add(transactionInitiatedEvent.transactionReference, transactionDetail);
+            if(!FTTransactionDetails.ContainsKey(transactionInitiatedEvent.transactionReference)) {
+                FTTransactionDetails.Add(transactionInitiatedEvent.transactionReference, transactionDetail);
+            }
 
             var pointToWrite = new Point()
             {
@@ -39,7 +42,6 @@ namespace zoneswitch.metricsgenerator.Repository
                 {
                     { "transactionReference", transactionInitiatedEvent.transactionReference },
                     { "transactionType", transactionInitiatedEvent.transactionType },
-                    { "startTime", transactionInitiatedEvent.dateCreated },
                     { "status", TransactionStatus.Initiated}
                 },
                 Timestamp = DateTime.UtcNow
@@ -62,7 +64,7 @@ namespace zoneswitch.metricsgenerator.Repository
 
              var pointToWrite = new Point()
             {
-                Name = InfluxDataTables.FundsTransferInitiatedTable,
+                Name = InfluxDataTables.FundsTransferProcessedTable,
                 Tags = new Dictionary<string, object>() 
                 {
                     { "status", transactionProcessedEvent.status }
@@ -71,7 +73,6 @@ namespace zoneswitch.metricsgenerator.Repository
                 {
                     { "transactionReference", transactionProcessedEvent.transactionReference },
                     { "transactionType", transactionDetail.TransactionType },
-                    { "startTime", transactionDetail.StartTime },
                     { "status", transactionProcessedEvent.status},
                     { "timeTaken", totalTimeTaken}
                 },
@@ -86,8 +87,9 @@ namespace zoneswitch.metricsgenerator.Repository
         {
             var nameInquiryInitiated = JsonConvert.DeserializeObject<NameInquiryInitiatedEvent>(eventData);
 
-
-            NITransactionDetails.Add(nameInquiryInitiated.Trxref, Convert.ToDateTime(nameInquiryInitiated.DateUpdated));
+            if(!NITransactionDetails.ContainsKey(nameInquiryInitiated.TransactionReference)) {
+                NITransactionDetails.Add(nameInquiryInitiated.TransactionReference, Convert.ToDateTime(nameInquiryInitiated.DateUpdated));
+            }
 
              var pointToWrite = new Point()
             {
@@ -98,7 +100,7 @@ namespace zoneswitch.metricsgenerator.Repository
                 },
                 Fields = new Dictionary<string, object>()
                 {
-                    { "transactionReference", nameInquiryInitiated.Trxref },
+                    { "transactionReference", nameInquiryInitiated.TransactionReference },
                     { "transactionType", "Name Inquiry" }
                 },
                 Timestamp = DateTime.UtcNow
@@ -121,7 +123,7 @@ namespace zoneswitch.metricsgenerator.Repository
 
              var pointToWrite = new Point()
             {
-                Name = InfluxDataTables.NameInquiryInitiatedTable,
+                Name = InfluxDataTables.NameInquiryProcessedTable,
                 Tags = new Dictionary<string, object>() 
                 {
                     { "Status", nameInquiryProcessed.Status }
@@ -137,6 +139,66 @@ namespace zoneswitch.metricsgenerator.Repository
             };
 
             var isSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.NameInquiry);
+            return isSuccessful;
+        }
+        public static async Task<bool> ProcessISOFundsTransferInitiatedEvent(string eventData)
+        {
+            var isoFTEvent = JsonConvert.DeserializeObject<IsoFundsTransferEvent>(eventData);
+
+            if(!IsoFTTransactionDetails.ContainsKey(isoFTEvent.MsgTypeAndTransactionReference.Substring(4))) {
+                IsoFTTransactionDetails.Add(isoFTEvent.MsgTypeAndTransactionReference.Substring(4), Convert.ToDateTime(isoFTEvent.DateUpdated));
+            }
+
+             var pointToWrite = new Point()
+            {
+                Name = InfluxDataTables.IsoFundsTransferInitiatedTable,
+                Tags = new Dictionary<string, object>() 
+                {
+                    { "Status", TransactionStatus.Initiated }
+                },
+                Fields = new Dictionary<string, object>()
+                {
+                    { "transactionReference", isoFTEvent.MsgTypeAndTransactionReference.Substring(4) },
+                    { "transactionType", "Iso FundsTransfer" }
+                },
+                Timestamp = DateTime.UtcNow
+            };
+
+            var isSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.IsoFundsTransfer);
+            return isSuccessful;
+        }
+
+        public static async Task<bool> ProcessISOFundsTransferProcessedEvent(string eventData)
+        {
+            var isoFTEvent = JsonConvert.DeserializeObject<IsoFundsTransferEvent>(eventData);
+
+            if(String.IsNullOrEmpty(isoFTEvent.ResponseCode) || isoFTEvent.MessageTypeIndicator != "210" || !Convert.ToBoolean(isoFTEvent.FromSwitch)) {
+                return true;
+            }
+            var totalTimeTaken = 0.0;
+            NITransactionDetails.TryGetValue(isoFTEvent.MsgTypeAndTransactionReference.Substring(4), out DateTime timeUpdated);
+
+            if(timeUpdated.Year > 1) {
+                totalTimeTaken = (Convert.ToDateTime(isoFTEvent.DateUpdated) - timeUpdated).TotalSeconds;
+            }
+
+             var pointToWrite = new Point()
+            {
+                Name = InfluxDataTables.IsoFundsTransferProcessedTable,
+                Tags = new Dictionary<string, object>() 
+                {
+                    { "Status", isoFTEvent.ResponseCode }
+                },
+                Fields = new Dictionary<string, object>()
+                {
+                    { "transactionReference", isoFTEvent.MsgTypeAndTransactionReference.Substring(4) },
+                    { "transactionType", "Iso FundsTransfer" },
+                    { "totalTime", totalTimeTaken }
+                },
+                Timestamp = DateTime.UtcNow
+            };
+
+            var isSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.IsoFundsTransfer);
             return isSuccessful;
         }
 

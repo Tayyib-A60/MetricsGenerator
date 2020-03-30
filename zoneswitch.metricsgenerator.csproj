@@ -4,8 +4,8 @@
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <UserSecretsId>dotnet-zoneswitch.metricsgenerator-37E266C5-B683-47CE-91B2-123341EF332D</UserSecretsId>
     <RuntimeIdentifier>win10-x64</RuntimeIdentifier>
-    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
-    <RuntimeIdentifier>ubuntu.16.04-x64</RuntimeIdentifier>
+    <!-- <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+    <RuntimeIdentifier>ubuntu.16.04-x64</RuntimeIdentifier> -->
   </PropertyGroup>
 
   <ItemGroup>

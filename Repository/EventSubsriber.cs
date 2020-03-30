@@ -27,9 +27,6 @@ namespace zoneswitch.metricsgenerator.Repository
                 switch (x.Event.EventType)
                 {
                     case FundsTransferEvents.INITIATED:
-                        //  Console.WriteLine("33 subscriber ....Picking Initiated transaction", data);
-                        
-                        
                         var posted = await MetricsProcessor.ProcessFundsTransferInitiatedEvent(data);
                         if(posted)
                         {
@@ -58,6 +55,45 @@ namespace zoneswitch.metricsgenerator.Repository
                         var nameInquiryInitiated = await MetricsProcessor.ProcessNameInquiryInitiatedEvent(data);
 
                         if(nameInquiryInitiated)
+                        {
+                            sub.Acknowledge(x);
+                            break;
+                        }
+                        else
+                        {
+                            sub.Fail(x, PersistentSubscriptionNakEventAction.Park, "Unable to Process event");
+                            break;
+                        }
+                    case NameInquiryEvents.PROCESSED:
+                        var nameInquiryProcessed = await MetricsProcessor.ProcessNameInquiryProcessedEvent(data);
+
+                        if(nameInquiryProcessed)
+                        {
+                            sub.Acknowledge(x);
+                            break;
+                        }
+                        else
+                        {
+                            sub.Fail(x, PersistentSubscriptionNakEventAction.Park, "Unable to Process event");
+                            break;
+                        }
+                    case IsoFundsTransferEvents.INITIATED:
+                        var isoFTInitiated = await MetricsProcessor.ProcessISOFundsTransferInitiatedEvent(data);
+
+                        if(isoFTInitiated)
+                        {
+                            sub.Acknowledge(x);
+                            break;
+                        }
+                        else
+                        {
+                            sub.Fail(x, PersistentSubscriptionNakEventAction.Park, "Unable to Process event");
+                            break;
+                        }
+                    case IsoFundsTransferEvents.PROCESSED:
+                        var isoFTProcessed = await MetricsProcessor.ProcessISOFundsTransferProcessedEvent(data);
+
+                        if(isoFTProcessed)
                         {
                             sub.Acknowledge(x);
                             break;
