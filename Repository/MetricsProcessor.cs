@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using zoneswitch.metricsgenerator.Extensions;
 using zoneswitch.metricsgenerator.Models;
+using zoneswitch.metricsgenerator.Models.DbData;
 
 namespace zoneswitch.metricsgenerator.Repository
 {
@@ -286,6 +287,71 @@ namespace zoneswitch.metricsgenerator.Repository
 
             var isSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.WindowResources);
             return isSuccessful;
+        }
+
+
+        public static async Task<List<long>> ProcessUniqueAccounts(List<UniqueAccount> accounts)
+        {
+            var processedAccounts = new List<long>();
+
+            foreach (var account in accounts)
+            {
+                var pointToWrite = new Point()
+                {
+                    Name = InfluxDataTables.UniqueAccountsTable,
+                    Tags = new Dictionary<string, object>() 
+                    {
+                        { "MonthYear", account.MonthYear }
+                    },
+                    Fields = new Dictionary<string, object>()
+                    {
+                        { "AccountNumber", account.AccountNumber },
+                        { "TransactionCount", account.TransactionCount }
+                    },
+                    Timestamp = DateTime.UtcNow
+                };
+
+                var isSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.UniqueMetrics);
+
+                if(isSuccessful) {
+                    processedAccounts.Add(account.Id);
+                }
+
+            }
+
+            return processedAccounts;
+        }
+
+        public static async Task<List<long>> ProcessUniqueCards(List<UniqueCard> cards)
+        {
+            var processedCardIds = new List<long>();
+
+            foreach (var card in cards)
+            {
+                var pointToWrite = new Point()
+                {
+                    Name = InfluxDataTables.UniqueAccountsTable,
+                    Tags = new Dictionary<string, object>() 
+                    {
+                        { "MonthYear", card.MonthYear }
+                    },
+                    Fields = new Dictionary<string, object>()
+                    {
+                        { "AccountNumber", card.CardNo },
+                        { "TransactionCount", card.TransactionCount }
+                    },
+                    Timestamp = DateTime.UtcNow
+                };
+
+                var isSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.UniqueMetrics);
+
+                if(isSuccessful) {
+                    processedCardIds.Add(card.Id);
+                } 
+
+            }
+            
+            return processedCardIds;
         }
 
 

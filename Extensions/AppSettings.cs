@@ -10,5 +10,8 @@ namespace zoneswitch.metricsgenerator.Extensions
         public string InfluxDbPassword { get; set; }
         public string InfluxDbUrl { get; set; }
         public string BankCode { get; set; }
+        public string SqlServerConnectionString { get; set; }
+        public string UniqueAccountTable { get; set; }
+        public string UniqueCardTable { get; set; }
     }
 }

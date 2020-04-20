@@ -12,6 +12,8 @@ namespace zoneswitch.metricsgenerator.Models
         public const string LinuxSendSchemeInviteTable = "LinuxSendSchemeInviteTable";
         public const string LinuxNameInquiryTable = "LinuxNameInquiryTable";
         public const string LinuxResourcesTable = "LinuxResourcesTable";
+        public const string UniqueAccountsTable = "UniqueAccountsTable";
+        public const string UniqueCardsTable = "UniqueCardsTable";
 
     }
 }
