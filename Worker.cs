@@ -20,6 +20,7 @@ namespace zoneswitch.metricsgenerator
         private readonly ILogger<Worker> _logger;
         private string FTGroupName = "ZoneSwitchFT";
         private string NIGroupName = "ZoneSwitchNI";
+        private string ResourceGroupName = "ZoneSwitchResources";
         public Worker(ILogger<Worker> logger)
         {
             _logger = logger;
@@ -52,11 +53,23 @@ namespace zoneswitch.metricsgenerator
                 
                 var user = appsettings.EventStoreUser;
                 var password = appsettings.EventStorePassword;
+
                 var connection = EventStoreHost.ConnectToEventStore();
+                // Connect to FT Stream
                 connection.CreatePersistentSubscriptionAsync(FundsTransferEvents.STREAM_NAME, FTGroupName, settings, new UserCredentials(user, password));
                 connection.ConnectToPersistentSubscription(FundsTransferEvents.STREAM_NAME, FTGroupName, EventSubscriber.Process, null, new UserCredentials(user, password));
+
+                // Connect to NI Stream
                 connection.CreatePersistentSubscriptionAsync(NameInquiryEvents.STREAM_NAME, NIGroupName, settings, new UserCredentials(user, password));
                 connection.ConnectToPersistentSubscription(NameInquiryEvents.STREAM_NAME, NIGroupName, EventSubscriber.Process, null, new UserCredentials(user, password));
+
+                // Connect to WindowResource Stream
+                connection.CreatePersistentSubscriptionAsync(EnvironmentSpecificEvents.WINDOWS_STREAM_NAME, ResourceGroupName, settings, new UserCredentials(user, password));
+                connection.ConnectToPersistentSubscription(EnvironmentSpecificEvents.WINDOWS_STREAM_NAME, ResourceGroupName, EventSubscriber.Process, null, new UserCredentials(user, password));
+
+                // Connect to LinuxEnvironment Stream
+                connection.CreatePersistentSubscriptionAsync(EnvironmentSpecificEvents.LINUX_STREAM_NAME, ResourceGroupName, settings, new UserCredentials(user, password));
+                connection.ConnectToPersistentSubscription(EnvironmentSpecificEvents.LINUX_STREAM_NAME, ResourceGroupName, EventSubscriber.Process, null, new UserCredentials(user, password));
             }
             catch (Exception) 
             {

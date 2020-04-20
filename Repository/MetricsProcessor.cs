@@ -83,6 +83,7 @@ namespace zoneswitch.metricsgenerator.Repository
 
             return isSuccessful;
         }
+
         public static async Task<bool> ProcessNameInquiryInitiatedEvent(string eventData)
         {
             var nameInquiryInitiated = JsonConvert.DeserializeObject<NameInquiryInitiatedEvent>(eventData);
@@ -141,6 +142,7 @@ namespace zoneswitch.metricsgenerator.Repository
             var isSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.NameInquiry);
             return isSuccessful;
         }
+
         public static async Task<bool> ProcessISOFundsTransferInitiatedEvent(string eventData)
         {
             var isoFTEvent = JsonConvert.DeserializeObject<IsoFundsTransferEvent>(eventData);
@@ -201,6 +203,91 @@ namespace zoneswitch.metricsgenerator.Repository
             var isSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.IsoFundsTransfer);
             return isSuccessful;
         }
+
+        public static async Task<bool> ProcessLinuxEvents(string eventData)
+        {
+            var linuxEnvironmentEvent = JsonConvert.DeserializeObject<LinuxEnvironmentEvent>(eventData);
+            var postSuccessful = false;
+
+            foreach (var serviceMetrics in linuxEnvironmentEvent.ServiceStatistics)
+            {
+                var pointToWrite = new Point
+                {
+                    Name = serviceMetrics.ServiceName,
+                    Tags = new Dictionary<string, object>
+                    {
+                        { "FunctionName", serviceMetrics.FunctionName },
+                    },
+                    Fields = new Dictionary<string, object>
+                    {
+                        { "AverageResponseTime", serviceMetrics.AverageResponseTime },
+                        { "RequestRate", serviceMetrics.RequestRate },
+                        { "ResponseRate", serviceMetrics.ResponseRate },
+                        { "SuccessRate", serviceMetrics.SuccessRate }
+                    },
+                    Timestamp = DateTime.UtcNow
+                };
+                var isSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.LinuxEnvironment);
+            }
+
+            foreach (var linuxServerMetrics in linuxEnvironmentEvent.SystemStatistics)
+            {
+                // Convert entry(ies) to number type(s)
+                Double.TryParse(linuxServerMetrics.CPUUsage.Substring(0, linuxServerMetrics.CPUUsage.Length-2), out double cpuUsage);
+
+                Double.TryParse(linuxServerMetrics.RAMUsage.Substring(0, linuxServerMetrics.CPUUsage.Length-2), out double ramUsage);
+
+                Double.TryParse(linuxServerMetrics.HardDiskUsage.Substring(0, linuxServerMetrics.CPUUsage.Length-2), out double hdUsage);
+
+                Double.TryParse(linuxServerMetrics.NetworkSpeed.Substring(0, linuxServerMetrics.CPUUsage.Length-4), out double networkSpeed);
+
+                var pointToWrite = new Point
+                {
+                    Name = InfluxDataTables.LinuxResourcesTable,
+                    Tags = new Dictionary<string, object>
+                    {
+                        { "OS", "Linux" },
+                    },
+                    Fields = new Dictionary<string, object>
+                    {
+                        { "CPUUsage", cpuUsage },
+                        { "RAMUsage", ramUsage },
+                        { "HardDiskUsage", hdUsage },
+                        { "NetworkSpeed",  networkSpeed }
+                    },
+                    Timestamp = DateTime.UtcNow
+                };
+                postSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.LinuxEnvironment);
+            }
+
+            return postSuccessful;
+        }
+
+        public static async Task<bool> ProcessResourceEvents(string eventData)
+        {
+            var resourceEventData = JsonConvert.DeserializeObject<ResourceEventData>(eventData);
+
+             var pointToWrite = new Point()
+            {
+                Name = InfluxDataTables.WindowResourcesTable,
+                Tags = new Dictionary<string, object>() 
+                {
+                    { "OS", "Windows" }
+                },
+                Fields = new Dictionary<string, object>()
+                {
+                    { "TotalDiskSpace", resourceEventData.TotalDiskSpace },
+                    { "AvailableDiskSpace", resourceEventData.AvailableDiskSpace },
+                    { "AvailableRamInMB", resourceEventData.AvailableRamInMB },
+                    { "Processor", resourceEventData.Processor }
+                },
+                Timestamp = DateTime.UtcNow
+            };
+
+            var isSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.WindowResources);
+            return isSuccessful;
+        }
+
 
         private static async Task<bool> PostToInfluxDb(Point pointToWrite, string databaseName)
         {

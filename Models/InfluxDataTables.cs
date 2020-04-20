@@ -8,6 +8,10 @@ namespace zoneswitch.metricsgenerator.Models
         public const string NameInquiryProcessedTable = "NameInquiryProcessedTable";
         public const string IsoFundsTransferInitiatedTable = "FundsTransferInitiatedTable";
         public const string IsoFundsTransferProcessedTable = "FundsTransferProcessedTable";
+        public const string WindowResourcesTable = "WindowResourcesTable";
+        public const string LinuxSendSchemeInviteTable = "LinuxSendSchemeInviteTable";
+        public const string LinuxNameInquiryTable = "LinuxNameInquiryTable";
+        public const string LinuxResourcesTable = "LinuxResourcesTable";
 
     }
 }

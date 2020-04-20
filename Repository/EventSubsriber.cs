@@ -14,7 +14,6 @@ namespace zoneswitch.metricsgenerator.Repository
         {
             var data = Encoding.ASCII.GetString(x.Event.Data);
 
-            // Console.WriteLine("26 subscriber ....Feeded with event ", JsonConvert.SerializeObject(x.Event));
             var eventObject = JObject.Parse(JsonConvert.SerializeObject(x).ToString());
             var mainEvent = eventObject["Event"];
             var eventData = mainEvent["Data"].ToString();
@@ -94,6 +93,32 @@ namespace zoneswitch.metricsgenerator.Repository
                         var isoFTProcessed = await MetricsProcessor.ProcessISOFundsTransferProcessedEvent(data);
 
                         if(isoFTProcessed)
+                        {
+                            sub.Acknowledge(x);
+                            break;
+                        }
+                        else
+                        {
+                            sub.Fail(x, PersistentSubscriptionNakEventAction.Park, "Unable to Process event");
+                            break;
+                        }
+                    case EnvironmentSpecificEvents.WINDOWS_STREAM_NAME:
+                        var resourceEventProcessed = await MetricsProcessor.ProcessResourceEvents(data);
+
+                        if(resourceEventProcessed)
+                        {
+                            sub.Acknowledge(x);
+                            break;
+                        }
+                        else
+                        {
+                            sub.Fail(x, PersistentSubscriptionNakEventAction.Park, "Unable to Process event");
+                            break;
+                        }
+                    case EnvironmentSpecificEvents.LINUX_STREAM_NAME:
+                        var linuxEventProcessed = await MetricsProcessor.ProcessLinuxEvents(data);
+
+                        if(linuxEventProcessed)
                         {
                             sub.Acknowledge(x);
                             break;
