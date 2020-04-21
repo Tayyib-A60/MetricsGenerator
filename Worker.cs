@@ -102,20 +102,23 @@ namespace zoneswitch.metricsgenerator {
             }
             _islocked = true;
 
-            var cardsFromDb = await _cardProcessor.GetUniqueCards();
+            _logger.LogInformation("Processing unique metric requests");
+            // var cardsFromDb = await _cardProcessor.GetUniqueCards();
 
-            if(cardsFromDb.Count > 0) {
-                var cardsPostedIds = await MetricsProcessor.ProcessUniqueCards(cardsFromDb);
-                var updatedCards = await _cardProcessor.UpdateUniqueCards(cardsPostedIds);
+            // if(cardsFromDb.Count > 0) {
+            //     var cardsPostedIds = await MetricsProcessor.ProcessUniqueCards(cardsFromDb);
+            //     var updatedCards = await _cardProcessor.UpdateUniqueCards(cardsPostedIds);
 
-                if(updatedCards) {
-                    _logger.LogDebug("Cards updated to being monitored for the current month");
-                }
-            }
+            //     if(updatedCards) {
+            //         _logger.LogDebug("Cards updated to being monitored for the current month");
+            //     }
+            // }
 
             var accountsFromDb = await _accountProcessor.GetUniqueAccounts();
 
             if(accountsFromDb.Count > 0) {
+                _logger.LogInformation($"Processing unique account metrics, got {accountsFromDb.Count} from d db");
+
                 var accountPostedIds = await MetricsProcessor.ProcessUniqueAccounts(accountsFromDb);
                 var updatedAccounts = await _accountProcessor.UpdateUniqueAccounts(accountPostedIds);
 

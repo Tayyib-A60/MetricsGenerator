@@ -34,7 +34,7 @@ namespace zoneswitch.metricsgenerator.Repository
             var monthYear = $"{DateTime.Now.Month}/{DateTime.Now.Year}";
             var sqlConnection = new SqlConnection(appSettings.SqlServerConnectionString);
             var commandQuery = string.Empty;
-            commandQuery = $"SELECT *  from {appSettings.UniqueAccountTable} where MonthYear = @monthYear and Monitoring = false";
+            commandQuery = $"SELECT *  from {appSettings.UniqueAccountTable} where MonthYear = @monthYear and Monitoring = 0";
 
             try
             {
@@ -55,11 +55,12 @@ namespace zoneswitch.metricsgenerator.Repository
                             {
                                 Id = Convert.ToInt64(sqlDataReader["Id"].ToString()),
                                 AccountNumber = sqlDataReader["AccountNumber"].ToString(),
+                                MonthYear = sqlDataReader["MonthYear"].ToString(),
                                 TransactionCount = Convert.ToInt32(
-                                                    sqlDataReader["TransactionCount"].ToString()),
-                                BilledStatus = sqlDataReader["BilledStatus"].ToString()
+                                                    sqlDataReader["TransactionCount"].ToString())
                             });
                         }
+                        _logger.LogDebug($"{JsonConvert.SerializeObject(accounts)}");
                         return accounts;
                     }
                 }
@@ -92,6 +93,8 @@ namespace zoneswitch.metricsgenerator.Repository
             commandQuery = $"UPDATE {appSettings.UniqueAccountTable} set Monitoring=1 where MonthYear = @monthYear and ";
             commandQuery  += generateRemainingQuery(accountIds);
 
+            _logger.LogInformation("About to update processed accounts");
+            _logger.LogInformation($"using this query: {commandQuery}");
             try
             {
                 using (var sqlCommand = new SqlCommand(commandQuery, sqlConnection))
@@ -125,7 +128,7 @@ namespace zoneswitch.metricsgenerator.Repository
             {
                 remainingQuery += $" Id={accountIds[i]} ";
 
-                if(accountIds.Count > 1 || i != accountIds.Count -1)
+                if(accountIds.Count > 1 && i != accountIds.Count -1)
                 {
                     remainingQuery += " or ";
                 }

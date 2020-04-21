@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using zoneswitch.metricsgenerator.Repository;
 
 namespace zoneswitch.metricsgenerator
 {
@@ -14,7 +15,8 @@ namespace zoneswitch.metricsgenerator
             Host.CreateDefaultBuilder(args)
                 .ConfigureServices((hostContext, services) =>
                 {
-                    // services.AddSingleton<IEventStoreRepository, EventStoreRepository>();
+                    services.AddSingleton<UniqueAccountProcessor>();
+                    services.AddSingleton<UniqueCardProcessor>();
                     // services.AddSingleton<IMetricsProcessor, MetricsProcessor>();
                     // services.AddSingleton<IEventSubscriber, EventSubsriber>();
                     services.AddHostedService<Worker>();

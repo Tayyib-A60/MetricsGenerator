@@ -34,7 +34,7 @@ namespace zoneswitch.metricsgenerator.Repository
             var monthYear = $"{DateTime.Now.Month}/{DateTime.Now.Year}";
             var sqlConnection = new SqlConnection(appSettings.SqlServerConnectionString);
             var commandQuery = string.Empty;
-            commandQuery = $"SELECT *  from {appSettings.UniqueCardTable} where MonthYear = @monthYear and Monitoring = false";
+            commandQuery = $"SELECT *  from {appSettings.UniqueCardTable} where MonthYear = @monthYear and Monitoring = 0";
 
             try
             {
@@ -55,9 +55,9 @@ namespace zoneswitch.metricsgenerator.Repository
                             {
                                 Id = Convert.ToInt64(sqlDataReader["Id"].ToString()),
                                 CardNo = sqlDataReader["CardNo"].ToString(),
+                                MonthYear = sqlDataReader["MonthYear"].ToString(),
                                 TransactionCount = Convert.ToInt32(
                                                     sqlDataReader["TransactionCount"].ToString()),
-                                BilledStatus = sqlDataReader["BilledStatus"].ToString()
                             });
                         }
                         return cards;
