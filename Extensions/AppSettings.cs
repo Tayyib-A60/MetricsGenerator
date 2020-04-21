@@ -13,5 +13,6 @@ namespace zoneswitch.metricsgenerator.Extensions
         public string SqlServerConnectionString { get; set; }
         public string UniqueAccountTable { get; set; }
         public string UniqueCardTable { get; set; }
+        public string UniqueMetricsInterval { get; set; }
     }
 }

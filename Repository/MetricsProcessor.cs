@@ -337,7 +337,7 @@ namespace zoneswitch.metricsgenerator.Repository
                     },
                     Fields = new Dictionary<string, object>()
                     {
-                        { "AccountNumber", card.CardNo },
+                        { "CardNo", card.CardNo },
                         { "TransactionCount", card.TransactionCount }
                     },
                     Timestamp = DateTime.UtcNow
@@ -350,7 +350,7 @@ namespace zoneswitch.metricsgenerator.Repository
                 } 
 
             }
-            
+
             return processedCardIds;
         }
 
