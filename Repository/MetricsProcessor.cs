@@ -1,23 +1,28 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using InfluxDB.Client;
+using InfluxDB.Client.Api.Domain;
+using InfluxDB.Client.Writes;
 using System.Threading.Tasks;
 using InfluxData.Net.InfluxDb;
 using InfluxData.Net.InfluxDb.Models;
-using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using zoneswitch.metricsgenerator.Extensions;
 using zoneswitch.metricsgenerator.Models;
 using zoneswitch.metricsgenerator.Models.DbData;
+using NLog;
 
 namespace zoneswitch.metricsgenerator.Repository
 {
     public class MetricsProcessor
     {
+        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
         public static AppSettings appsettings { get; set; }
         public static Dictionary<string, FTTransactionDetail> FTTransactionDetails = new Dictionary<string, FTTransactionDetail>();
         public static Dictionary<string, DateTime> NITransactionDetails = new Dictionary<string, DateTime>();
         public static Dictionary<string, DateTime> IsoFTTransactionDetails = new Dictionary<string, DateTime>();
+
         public static async Task<bool> ProcessFundsTransferInitiatedEvent(string eventData)
         {
             var transactionInitiatedEvent = JsonConvert.DeserializeObject<TransactionInitiatedEvent>(eventData);
@@ -205,7 +210,7 @@ namespace zoneswitch.metricsgenerator.Repository
             return isSuccessful;
         }
 
-        public static async Task<bool> ProcessLinuxEvents(string eventData)
+        public static async Task<bool> ProcessLinuxResourcesEvents(string eventData)
         {
             var linuxEnvironmentEvent = JsonConvert.DeserializeObject<LinuxEnvironmentEvent>(eventData);
             var postSuccessful = false;
@@ -228,19 +233,25 @@ namespace zoneswitch.metricsgenerator.Repository
                     },
                     Timestamp = DateTime.UtcNow
                 };
-                var isSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.LinuxEnvironment);
+                postSuccessful = postSuccessful && await PostToInfluxDb(pointToWrite, InfluxDatabases.LinuxResources);
             }
 
             foreach (var linuxServerMetrics in linuxEnvironmentEvent.SystemStatistics)
             {
+                double cpuUsage = 0;
+                double ramUsage = 0;
+                double hdUsage = 0;
+                int networkSpeed = 0;
+
                 // Convert entry(ies) to number type(s)
-                Double.TryParse(linuxServerMetrics.CPUUsage.Substring(0, linuxServerMetrics.CPUUsage.Length-2), out double cpuUsage);
-
-                Double.TryParse(linuxServerMetrics.RAMUsage.Substring(0, linuxServerMetrics.CPUUsage.Length-2), out double ramUsage);
-
-                Double.TryParse(linuxServerMetrics.HardDiskUsage.Substring(0, linuxServerMetrics.CPUUsage.Length-2), out double hdUsage);
-
-                Double.TryParse(linuxServerMetrics.NetworkSpeed.Substring(0, linuxServerMetrics.CPUUsage.Length-4), out double networkSpeed);
+                if(linuxServerMetrics.CPUUsage.Length > 2)
+                    Double.TryParse(linuxServerMetrics.CPUUsage.Substring(0, linuxServerMetrics.CPUUsage.Length-2), out cpuUsage);
+                if(linuxServerMetrics.RAMUsage.Length > 2)
+                    Double.TryParse(linuxServerMetrics.RAMUsage.Substring(0, linuxServerMetrics.RAMUsage.Length-2), out ramUsage);
+                if(linuxServerMetrics.HardDiskUsage.Length > 2)
+                    Double.TryParse(linuxServerMetrics.HardDiskUsage.Substring(0, linuxServerMetrics.HardDiskUsage.Length-2), out hdUsage);
+                if(linuxServerMetrics.NetworkSpeed.Length > 2)
+                    Int32.TryParse(linuxServerMetrics.NetworkSpeed.Substring(0, linuxServerMetrics.NetworkSpeed.Length-4), out networkSpeed);
 
                 var pointToWrite = new Point
                 {
@@ -251,22 +262,26 @@ namespace zoneswitch.metricsgenerator.Repository
                     },
                     Fields = new Dictionary<string, object>
                     {
-                        { "CPUUsage", cpuUsage },
-                        { "RAMUsage", ramUsage },
-                        { "HardDiskUsage", hdUsage },
-                        { "NetworkSpeed",  networkSpeed }
+                        { "CPUUsage", cpuUsage == 0.0 ? 1.0 : cpuUsage },
+                        { "RAMUsage", ramUsage == 0.0 ? 1.0 : ramUsage },
+                        { "HardDiskUsage", hdUsage == 0.0 ? 1.0 : ramUsage },
+                        { "NetworkSpeed",  networkSpeed == 0 ? 1 : networkSpeed }
                     },
                     Timestamp = DateTime.UtcNow
                 };
-                postSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.LinuxEnvironment);
+                postSuccessful = postSuccessful && await PostToInfluxDb(pointToWrite, InfluxDatabases.LinuxResources);
             }
 
             return postSuccessful;
         }
 
-        public static async Task<bool> ProcessResourceEvents(string eventData)
+        public static async Task<bool> ProcessWindowsResourceEvents(string eventData)
         {
             var resourceEventData = JsonConvert.DeserializeObject<ResourceEventData>(eventData);
+
+             _logger.Debug("Data for win resources received from event store");
+
+            // PostToInfluxDbTwoPointO(resourceEventData);
 
              var pointToWrite = new Point()
             {
@@ -286,6 +301,8 @@ namespace zoneswitch.metricsgenerator.Repository
             };
 
             var isSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.WindowResources);
+
+            _logger.Debug($"Data for win resources Posted: {isSuccessful}");
             return isSuccessful;
         }
 
@@ -353,12 +370,59 @@ namespace zoneswitch.metricsgenerator.Repository
 
             return processedCardIds;
         }
+        
+        private static void PostToInfluxDbTwoPointO(ResourceEventData eventData)
+        {
+            var influxDBClient = InfluxDBClientFactory.Create(appsettings.InfluxDbTwoPoint0DbUrl, appsettings.Token.ToCharArray());
 
+            Console.WriteLine("Writing resource metrics data for 2.0");
+
+            // Write Data
+            using (var writeApi = influxDBClient.GetWriteApi())
+            {
+                // Write by Point
+                var point = PointData.Measurement("windowsMetrics")
+                    .Tag("bankCode", appsettings.BankCode)
+                    // .Field("value", 55D)
+                    .Timestamp(DateTime.UtcNow.AddSeconds(-10), WritePrecision.Ns);
+                
+                writeApi.WritePoint(appsettings.InfluxDbBucketName, appsettings.InfluxDbOrg, point);
+                
+                // Write by LineProtocol
+                writeApi.WriteRecord(appsettings.InfluxDbBucketName, appsettings.InfluxDbOrg, WritePrecision.Ns, "WinMetrics");
+
+                Console.WriteLine("Writing record");
+                
+                // Write by POCO
+                var win_metrics = new WindowsMetrics {Processor = eventData.Processor, AvailableDiskSpace = eventData.AvailableDiskSpace, Time = DateTime.UtcNow, AvailableRamInMB = eventData.AvailableRamInMB, TotalDiskSpace = eventData.TotalDiskSpace };
+                writeApi.WriteMeasurement(appsettings.InfluxDbBucketName, appsettings.InfluxDbOrg, WritePrecision.Ns, win_metrics);
+
+                Console.WriteLine("Record written");
+
+
+            // Query data
+            // var flux = $"from({appsettings.InfluxDbBucketName}:\"TotalDiskSpace\")";
+
+            // var fluxTables = await influxDBClient.GetQueryApi().QueryAsync(flux, appsettings.InfluxDbOrg);
+            // fluxTables.ForEach(fluxTable =>
+            // {
+            //     var fluxRecords = fluxTable.Records;
+            //     fluxRecords.ForEach(fluxRecord =>
+            //     {
+            //         Console.WriteLine($"{fluxRecord.GetTime()}: {fluxRecord.GetValue()}");
+            //     });
+            // });
+
+            influxDBClient.Dispose();
+
+            }
+            
+        }
 
         private static async Task<bool> PostToInfluxDb(Point pointToWrite, string databaseName)
         {
             appsettings = new AppSettings();
-            using (StreamReader r = File.OpenText("appsettings.json"))
+            using (StreamReader r = System.IO.File.OpenText("appsettings.json"))
             {
                 string json = r.ReadToEnd();
                 json = json.Replace("\r\n","").Trim();
@@ -378,4 +442,5 @@ namespace zoneswitch.metricsgenerator.Repository
             return written.Success;
         }
     }
+
 }

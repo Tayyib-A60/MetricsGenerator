@@ -14,5 +14,9 @@ namespace zoneswitch.metricsgenerator.Extensions
         public string UniqueAccountTable { get; set; }
         public string UniqueCardTable { get; set; }
         public string UniqueMetricsInterval { get; set; }
+        public string InfluxDbTwoPoint0DbUrl { get; set; }
+        public string Token { get; set; }
+        public string InfluxDbBucketName { get; set; }
+        public string InfluxDbOrg { get; set; }
     }
 }

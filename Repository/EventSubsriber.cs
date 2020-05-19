@@ -34,7 +34,7 @@ namespace zoneswitch.metricsgenerator.Repository
                         }
                         else
                         {
-                            sub.Fail(x, PersistentSubscriptionNakEventAction.Park, "Unable to Process event");
+                            sub.Fail(x, PersistentSubscriptionNakEventAction.Retry, "Unable to Process event, retrying");
                             break;
                         }
                     case FundsTransferEvents.PROCESSED:
@@ -47,7 +47,7 @@ namespace zoneswitch.metricsgenerator.Repository
                         }
                         else
                         {
-                            sub.Fail(x, PersistentSubscriptionNakEventAction.Park, "Unable to Process event");
+                            sub.Fail(x, PersistentSubscriptionNakEventAction.Retry, "Unable to Process event, retrying");
                             break;
                         }
                     case NameInquiryEvents.INITIATED:
@@ -60,7 +60,7 @@ namespace zoneswitch.metricsgenerator.Repository
                         }
                         else
                         {
-                            sub.Fail(x, PersistentSubscriptionNakEventAction.Park, "Unable to Process event");
+                            sub.Fail(x, PersistentSubscriptionNakEventAction.Retry, "Unable to Process event, retrying");
                             break;
                         }
                     case NameInquiryEvents.PROCESSED:
@@ -73,7 +73,7 @@ namespace zoneswitch.metricsgenerator.Repository
                         }
                         else
                         {
-                            sub.Fail(x, PersistentSubscriptionNakEventAction.Park, "Unable to Process event");
+                            sub.Fail(x, PersistentSubscriptionNakEventAction.Retry, "Unable to Process event, retrying");
                             break;
                         }
                     case IsoFundsTransferEvents.INITIATED:
@@ -86,7 +86,7 @@ namespace zoneswitch.metricsgenerator.Repository
                         }
                         else
                         {
-                            sub.Fail(x, PersistentSubscriptionNakEventAction.Park, "Unable to Process event");
+                            sub.Fail(x, PersistentSubscriptionNakEventAction.Retry, "Unable to Process event, retrying");
                             break;
                         }
                     case IsoFundsTransferEvents.PROCESSED:
@@ -99,11 +99,11 @@ namespace zoneswitch.metricsgenerator.Repository
                         }
                         else
                         {
-                            sub.Fail(x, PersistentSubscriptionNakEventAction.Park, "Unable to Process event");
+                            sub.Fail(x, PersistentSubscriptionNakEventAction.Retry, "Unable to Process event, retrying");
                             break;
                         }
-                    case EnvironmentSpecificEvents.WINDOWS_STREAM_NAME:
-                        var resourceEventProcessed = await MetricsProcessor.ProcessResourceEvents(data);
+                    case EnvironmentSpecificEvents.WINDOWS_RESOURCES_EN:
+                        var resourceEventProcessed = await MetricsProcessor.ProcessWindowsResourceEvents(data);
 
                         if(resourceEventProcessed)
                         {
@@ -112,11 +112,11 @@ namespace zoneswitch.metricsgenerator.Repository
                         }
                         else
                         {
-                            sub.Fail(x, PersistentSubscriptionNakEventAction.Park, "Unable to Process event");
+                            sub.Fail(x, PersistentSubscriptionNakEventAction.Retry, "Unable to Process event, retrying");
                             break;
                         }
-                    case EnvironmentSpecificEvents.LINUX_STREAM_NAME:
-                        var linuxEventProcessed = await MetricsProcessor.ProcessLinuxEvents(data);
+                    case EnvironmentSpecificEvents.LINUX_RESOURCES_EN:
+                        var linuxEventProcessed = await MetricsProcessor.ProcessLinuxResourcesEvents(data);
 
                         if(linuxEventProcessed)
                         {
@@ -125,11 +125,11 @@ namespace zoneswitch.metricsgenerator.Repository
                         }
                         else
                         {
-                            sub.Fail(x, PersistentSubscriptionNakEventAction.Park, "Unable to Process event");
+                            sub.Fail(x, PersistentSubscriptionNakEventAction.Retry, "Unable to Process event, retrying");
                             break;
                         }
                     default:
-                        sub.Fail(x, PersistentSubscriptionNakEventAction.Park, "Unable to Process event");
+                        sub.Fail(x, PersistentSubscriptionNakEventAction.Retry, "Unable to Process event, retrying");
                         break;
                 }
             }

@@ -20,7 +20,8 @@ namespace zoneswitch.metricsgenerator {
         public AppSettings appSettings { get; set; }
         private string FTGroupName = "ZoneSwitchFT";
         private string NIGroupName = "ZoneSwitchNI";
-        private string ResourceGroupName = "ZoneSwitchResources";
+        private string WindowsResourceGroupName = "ZoneSwitchWindowsResources";
+        private string LinuxResourceGroupName = "ZoneSwitchWindowsResources";
         public static bool _islocked;
         private UniqueAccountProcessor _accountProcessor { get; }
         private UniqueCardProcessor _cardProcessor { get; }
@@ -35,14 +36,15 @@ namespace zoneswitch.metricsgenerator {
         protected override async Task ExecuteAsync (CancellationToken stoppingToken) {
             // Creates a subscribtion to ZSTransaction events (Both Card and Accounts)
             Start ();
-            RunUniqueProcessors();
+            // RunUniqueProcessors();
             while (!stoppingToken.IsCancellationRequested) {
                 _logger.LogInformation ("Worker running at: {time}", DateTimeOffset.Now);
                 await Task.Delay (60000, stoppingToken);
             }
         }
 
-        public void Start () {
+        public void Start () 
+        {
             var appsettings = new AppSettings ();
             using (StreamReader r = File.OpenText ("appsettings.json")) {
                 string json = r.ReadToEnd ();
@@ -67,12 +69,12 @@ namespace zoneswitch.metricsgenerator {
                 connection.ConnectToPersistentSubscription (NameInquiryEvents.STREAM_NAME, NIGroupName, EventSubscriber.Process, null, new UserCredentials (user, password));
 
                 // Connect to WindowResource Stream
-                connection.CreatePersistentSubscriptionAsync (EnvironmentSpecificEvents.WINDOWS_STREAM_NAME, ResourceGroupName, settings, new UserCredentials (user, password));
-                connection.ConnectToPersistentSubscription (EnvironmentSpecificEvents.WINDOWS_STREAM_NAME, ResourceGroupName, EventSubscriber.Process, null, new UserCredentials (user, password));
+                connection.CreatePersistentSubscriptionAsync (EnvironmentSpecificEvents.WINDOWS_STREAM_NAME, WindowsResourceGroupName, settings, new UserCredentials (user, password));
+                connection.ConnectToPersistentSubscription (EnvironmentSpecificEvents.WINDOWS_STREAM_NAME, WindowsResourceGroupName, EventSubscriber.Process, null, new UserCredentials (user, password));
 
                 // Connect to LinuxEnvironment Stream
-                connection.CreatePersistentSubscriptionAsync (EnvironmentSpecificEvents.LINUX_STREAM_NAME, ResourceGroupName, settings, new UserCredentials (user, password));
-                connection.ConnectToPersistentSubscription (EnvironmentSpecificEvents.LINUX_STREAM_NAME, ResourceGroupName, EventSubscriber.Process, null, new UserCredentials (user, password));
+                connection.CreatePersistentSubscriptionAsync (EnvironmentSpecificEvents.LINUX_STREAM_NAME, LinuxResourceGroupName, settings, new UserCredentials (user, password));
+                connection.ConnectToPersistentSubscription (EnvironmentSpecificEvents.LINUX_STREAM_NAME, LinuxResourceGroupName, EventSubscriber.Process, null, new UserCredentials (user, password));
             } catch (Exception) { }
             // return true;
         }
