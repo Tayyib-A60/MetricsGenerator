@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using NLog.Extensions.Logging;
 using zoneswitch.metricsgenerator.Repository;
 
 namespace zoneswitch.metricsgenerator
@@ -18,9 +20,14 @@ namespace zoneswitch.metricsgenerator
                 {
                     services.AddSingleton<UniqueAccountProcessor>();
                     services.AddSingleton<UniqueCardProcessor>();
-                    // services.AddSingleton<IMetricsProcessor, MetricsProcessor>();
-                    // services.AddSingleton<IEventSubscriber, EventSubsriber>();
                     services.AddHostedService<Worker>();
+                })
+                .ConfigureLogging((hostingContext, logging) =>
+                {
+                    logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
+                    logging.ClearProviders();
+                    logging.AddConsole();
+                    logging.AddNLog();
                 });
     }
 }

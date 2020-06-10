@@ -21,7 +21,7 @@ namespace zoneswitch.metricsgenerator {
         private string FTGroupName = "ZoneSwitchFT";
         private string NIGroupName = "ZoneSwitchNI";
         private string WindowsResourceGroupName = "ZoneSwitchWindowsResources";
-        private string LinuxResourceGroupName = "ZoneSwitchWindowsResources";
+        private string LinuxResourceGroupName = "ZoneSwitchLinuxResources";
         public static bool _islocked;
         private UniqueAccountProcessor _accountProcessor { get; }
         private UniqueCardProcessor _cardProcessor { get; }

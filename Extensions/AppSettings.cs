@@ -18,5 +18,7 @@ namespace zoneswitch.metricsgenerator.Extensions
         public string Token { get; set; }
         public string InfluxDbBucketName { get; set; }
         public string InfluxDbOrg { get; set; }
+        public string[] LinuxServices { get; set; }
+        public string[] LinuxFunctions { get; set; }
     }
 }
