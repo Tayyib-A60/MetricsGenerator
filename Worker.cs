@@ -37,6 +37,7 @@ namespace zoneswitch.metricsgenerator {
             // Creates a subscribtion to ZSTransaction events (Both Card and Accounts)
             Start ();
             // RunUniqueProcessors();
+            _logger.LogDebug("Worker service is now running");
             while (!stoppingToken.IsCancellationRequested) {
                 _logger.LogInformation ("Worker running at: {time}", DateTimeOffset.Now);
                 await Task.Delay (60000, stoppingToken);

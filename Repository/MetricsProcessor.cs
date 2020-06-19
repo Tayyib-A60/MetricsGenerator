@@ -13,16 +13,23 @@ using zoneswitch.metricsgenerator.Models;
 using zoneswitch.metricsgenerator.Models.DbData;
 using NLog;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 
 namespace zoneswitch.metricsgenerator.Repository
 {
     public class MetricsProcessor
     {
-        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
         public static AppSettings appsettings { get; set; }
         public static Dictionary<string, FTTransactionDetail> FTTransactionDetails = new Dictionary<string, FTTransactionDetail>();
         public static Dictionary<string, DateTime> NITransactionDetails = new Dictionary<string, DateTime>();
         public static Dictionary<string, DateTime> IsoFTTransactionDetails = new Dictionary<string, DateTime>();
+
+        private static ILogger<MetricsProcessor> _logger { get; set; }
+
+        public MetricsProcessor(ILogger<MetricsProcessor> logger)
+        {
+            _logger = logger;   
+        }
 
         public static async Task<bool> ProcessFundsTransferInitiatedEvent(string eventData)
         {
@@ -56,7 +63,7 @@ namespace zoneswitch.metricsgenerator.Repository
             
             var isSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.FundsTransfer);
             
-            Console.WriteLine("FT Initiated point written? {0}", isSuccessful);
+            _logger.LogDebug("FT Initiated point written? {0}", isSuccessful);
 
             return isSuccessful;
         }
@@ -217,28 +224,23 @@ namespace zoneswitch.metricsgenerator.Repository
             var linuxEnvironmentEvent = JsonConvert.DeserializeObject<LinuxEnvironmentEvent>(eventData);
             var postSuccessful = false;
 
+            _logger.LogDebug(JsonConvert.SerializeObject(linuxEnvironmentEvent));
+
             linuxEnvironmentEvent.ServiceStatistics.RemoveAt(0);
 
             foreach (var serviceMetrics in linuxEnvironmentEvent.ServiceStatistics)
             {
-                Console.WriteLine(linuxEnvironmentEvent.ServiceStatistics.Count.ToString());
+                _logger.LogDebug(linuxEnvironmentEvent.ServiceStatistics.Count.ToString());
                 if(!String.IsNullOrEmpty(serviceMetrics.ServiceName) && !String.IsNullOrEmpty(serviceMetrics.FunctionName))
                 {
-                    Console.WriteLine("Service metrics params; ServiceName: {0}, requestRate: {1}, responseRate: {2}, successRate: {3}, functionName: {4}", serviceMetrics.ServiceName, serviceMetrics.RequestRate, serviceMetrics.ResponseRate, serviceMetrics.SuccessRate, serviceMetrics.FunctionName);
-                    foreach (var item in appsettings.LinuxServices)
-                    {
-                        Console.Write(item + " ");
-                    }
-                    foreach (var item in appsettings.LinuxFunctions)
-                    {
-                        Console.Write(item + " ");
-                    }
-                        Console.WriteLine(serviceMetrics.ServiceName);
-                        Console.WriteLine(serviceMetrics.FunctionName);
+                    _logger.LogDebug("Service metrics params; ServiceName: {0}, requestRate: {1}, responseRate: {2}, successRate: {3}, functionName: {4}", serviceMetrics.ServiceName, serviceMetrics.RequestRate, serviceMetrics.ResponseRate, serviceMetrics.SuccessRate, serviceMetrics.FunctionName);
+
+                    _logger.LogDebug(serviceMetrics.ServiceName);
+                    _logger.LogDebug(serviceMetrics.FunctionName);
 
                     if(appsettings.LinuxServices.ToList().Contains(serviceMetrics.ServiceName.ToLower()) && appsettings.LinuxFunctions.ToList().Contains(serviceMetrics.FunctionName.ToLower()))
                     {
-                        Console.WriteLine("Creating point for {0}", serviceMetrics.ServiceName);
+                        _logger.LogDebug("Creating point for {0}", serviceMetrics.ServiceName);
 
                         var pointToWrite = new Point
                         {
@@ -257,7 +259,7 @@ namespace zoneswitch.metricsgenerator.Repository
                             Timestamp = DateTime.UtcNow
                         };
                         postSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.LinuxResources);
-                        Console.WriteLine($"Point written for service metrics: {postSuccessful}");
+                        _logger.LogDebug($"Point written for service metrics: {postSuccessful}");
                     }
                 }
             }
@@ -295,9 +297,9 @@ namespace zoneswitch.metricsgenerator.Repository
                     },
                     Timestamp = DateTime.UtcNow
                 };
-                Console.WriteLine($"Point: {JsonConvert.SerializeObject(pointToWrite)}");
+                _logger.LogDebug($"Point: {JsonConvert.SerializeObject(pointToWrite)}");
                 postSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.LinuxResources);
-                Console.WriteLine($"Point written for server metrics: {postSuccessful}");
+                _logger.LogDebug($"Point written for server metrics: {postSuccessful}");
             }
             return postSuccessful;
         }
@@ -306,7 +308,7 @@ namespace zoneswitch.metricsgenerator.Repository
         {
             var resourceEventData = JsonConvert.DeserializeObject<ResourceEventData>(eventData);
 
-             _logger.Debug("Data for win resources received from event store");
+             _logger.LogDebug("Data for win resources received from event store");
 
             // PostToInfluxDbTwoPointO(resourceEventData);
 
@@ -327,11 +329,11 @@ namespace zoneswitch.metricsgenerator.Repository
                 Timestamp = DateTime.UtcNow
             };
 
-            Console.WriteLine($"Point to write: {JsonConvert.SerializeObject(pointToWrite)}");
+            _logger.LogDebug($"Point to write: {JsonConvert.SerializeObject(pointToWrite)}");
 
             var isSuccessful = await PostToInfluxDb(pointToWrite, InfluxDatabases.WindowResources);
 
-            _logger.Debug($"Data for win resources Posted: {isSuccessful}");
+            _logger.LogTrace($"Data for win resources Posted: {isSuccessful}");
             return isSuccessful;
         }
 
@@ -404,7 +406,7 @@ namespace zoneswitch.metricsgenerator.Repository
         {
             var influxDBClient = InfluxDBClientFactory.Create(appsettings.InfluxDbTwoPoint0DbUrl, appsettings.Token.ToCharArray());
 
-            Console.WriteLine("Writing resource metrics data for 2.0");
+            _logger.LogDebug("Writing resource metrics data for 2.0");
 
             // Write Data
             using (var writeApi = influxDBClient.GetWriteApi())
@@ -420,13 +422,13 @@ namespace zoneswitch.metricsgenerator.Repository
                 // Write by LineProtocol
                 writeApi.WriteRecord(appsettings.InfluxDbBucketName, appsettings.InfluxDbOrg, WritePrecision.Ns, "WinMetrics");
 
-                Console.WriteLine("Writing record");
+                _logger.LogDebug("Writing record");
                 
                 // Write by POCO
                 var win_metrics = new WindowsMetrics {Processor = eventData.Processor, AvailableDiskSpace = eventData.AvailableDiskSpace, Time = DateTime.UtcNow, AvailableRamInMB = eventData.AvailableRamInMB, TotalDiskSpace = eventData.TotalDiskSpace };
                 writeApi.WriteMeasurement(appsettings.InfluxDbBucketName, appsettings.InfluxDbOrg, WritePrecision.Ns, win_metrics);
 
-                Console.WriteLine("Record written");
+                _logger.LogDebug("Record written");
 
 
             // Query data
@@ -438,7 +440,7 @@ namespace zoneswitch.metricsgenerator.Repository
             //     var fluxRecords = fluxTable.Records;
             //     fluxRecords.ForEach(fluxRecord =>
             //     {
-            //         Console.WriteLine($"{fluxRecord.GetTime()}: {fluxRecord.GetValue()}");
+            //         _logger.LogDebug($"{fluxRecord.GetTime()}: {fluxRecord.GetValue()}");
             //     });
             // });
 
@@ -464,18 +466,18 @@ namespace zoneswitch.metricsgenerator.Repository
 
             var influxDbUrl = appsettings.InfluxDbUrl;
             
-            Console.WriteLine($"{influxDbUrl}");
+            _logger.LogDebug($"{influxDbUrl}");
 
             var influxDbClient = new InfluxDbClient(influxDbUrl, username, password, version);
 
-            // Console.WriteLine($"Creating database: {databaseName}_{appsettings.BankCode}");
+            // _logger.LogDebug($"Creating database: {databaseName}_{appsettings.BankCode}");
 
             var response = await influxDbClient.Database.CreateDatabaseAsync($"{databaseName}_{appsettings.BankCode}");
-            Console.WriteLine($"Create database statuscode: {JsonConvert.SerializeObject(response)}");
+            _logger.LogDebug($"Create database statuscode: {JsonConvert.SerializeObject(response)}");
 
             var written = await influxDbClient.Client.WriteAsync(pointToWrite, $"{databaseName}_{appsettings.BankCode}");
 
-            Console.WriteLine($"Response from influxDb: {JsonConvert.SerializeObject(written)}");
+            _logger.LogDebug($"Response from influxDb: {JsonConvert.SerializeObject(written)}");
             return written.Success;
         }
     }

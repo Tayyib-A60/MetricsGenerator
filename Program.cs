@@ -15,19 +15,26 @@ namespace zoneswitch.metricsgenerator
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
+                .ConfigureLogging((hostingContext, logging) => {
+                    logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
+                    logging.AddConsole();
+                    logging.AddDebug();
+                    logging.AddEventSourceLogger();
+                    logging.AddNLog();
+                })
                 .UseWindowsService()
                 .ConfigureServices((hostContext, services) =>
                 {
                     services.AddSingleton<UniqueAccountProcessor>();
                     services.AddSingleton<UniqueCardProcessor>();
                     services.AddHostedService<Worker>();
-                })
-                .ConfigureLogging((hostingContext, logging) =>
-                {
-                    logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
-                    logging.ClearProviders();
-                    logging.AddConsole();
-                    logging.AddNLog();
                 });
+                // .ConfigureLogging((hostingContext, logging) =>
+                // {
+                //     logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
+                //     logging.ClearProviders();
+                //     logging.AddConsole();
+                //     logging.AddNLog();
+                // });
     }
 }
